@@ -56,8 +56,8 @@ scanChar c with isDigit c | isSpace c
 ... | true  | false = (Fin ∘ toℕ) c
 ... | false | true  = space
 
-tokenize : List Char → List Token
-tokenize = tokenize' [] ∘ map scanChar
+tokenize : List TokenChar → List Token
+tokenize = tokenize' []
   where
     tokenize' : List Token → List TokenChar → List Token
     tokenize' ts [] = reverse ts
@@ -72,11 +72,14 @@ tokenize = tokenize' [] ∘ map scanChar
     ... | number n = (number (10 * n + toℕ d))) :: t :: ts
     ... | _        = (number ∘ toℕ $ d) :: t :: ts
 
-parse : List Token → Parsing
-parse (t :: ts) with t
+parseTokens : List Token → Parsing
+parseTokens (t :: ts) with t
 ... | number n  = n :: parse ts
 ... | space     = parse ts
 ... | invalid c = invalid c
+
+parse :: String → Parsing
+parse data = toList data |> map scanChar |> tokenize |> parseTokens
 ```
 
 ---- Getting it going ----
