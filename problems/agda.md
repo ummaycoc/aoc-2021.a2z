@@ -33,7 +33,51 @@ _ ↓ _ : {m : ℕ}{n : Fin (ℕ.suc m)}{A B : Set} (f : φ (toℕ n) A B) → V
 f ↓ v with (Fin.toℕ n) ≟ m
 ... | Dec.yes = (f ↑ v) :: []
 ... | Dec.no  = (f ↑ (Vec.take (Fin.toℕ n) v)) :: (f ↓ (Vec.tail v))
-``` 
+```
+
+```agda
+data TokenChar where
+  digit : Fin 10 → TokenChar
+  space : TokenChar
+  invalid : Char → TokenChar
+
+data Token where
+  number : ℕ → Token
+  space : Token
+  invalid : Char → Token
+
+data Parsing where
+  valid : List ℕ → Parsing
+  invalid : Char → Parsing
+
+scanChar : Char → TokenChar
+scanChar c with isDigit c | isSpace c
+... | false | false = invalid c
+... | true  | false = (Fin ∘ toℕ) c
+... | false | true  = space
+
+tokenize : List Char → List Token
+tokenize = tokenize' [] ∘ map scanChar
+  where
+    tokenize' : List Token → List TokenChar → List Token
+    tokenize' ts [] = reverse ts
+    tokenize' ts (tc :: tcs) with tc
+    ... | invalid c = tokenize' ((invalid c) :: ts) tcs
+    ... | space     = tokenize' (space :: ts) tcs
+    ... | digit d   = tokenize' (append d ts) tcs
+
+    append : Fin 10 → List Token → List Token
+    append d [] = (number ∘ toℕ $ d) :: []
+    append d (t :: ts) with t
+    ... | number n = (number (10 * n + toℕ d))) :: t :: ts
+    ... | _        = (number ∘ toℕ $ d) :: t :: ts
+
+parse : List Token → Parsing
+parse (t :: ts) with t
+... | number n  = n :: parse ts
+... | space     = parse ts
+... | invalid c = invalid c
+```
 
 ---- Getting it going ----
 ```agda
