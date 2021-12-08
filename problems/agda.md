@@ -35,9 +35,8 @@ f ↓ v with (Fin.toℕ n) ≟ m
 ... | Dec.no  = (f ↑ (Vec.take (Fin.toℕ n) v)) :: (f ↓ (Vec.tail v))
 ``` 
 
-
 ---- Getting it going ----
-
+```agda
 module d1 where
 
 open import Data.Nat as ℕ using (ℕ; suc; _+_; _∸_)
@@ -66,3 +65,4 @@ _↓_ : {m : ℕ}{n : Fin (suc m)}{A B : Set} (f : φ (toℕ n) A B) → Vec A m
 f ↓ v with (toℕ n) ≟ m
 ... | Dec.yes = (f ↑ v) :: []
 ... | Dec.no  = (f ↑ (take (toℕ n) v)) :: (f ↓ (tail v))
+```
