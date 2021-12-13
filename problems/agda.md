@@ -36,55 +36,73 @@ f ↓ v with (Fin.toℕ n) ≟ m
 ```
 
 ```agda
-data InvalidChar where
+odule d1 where
+
+open import Data.Bool using (false; true)
+open import Data.Char using (Char; isDigit; isSpace) renaming (toℕ to toDigit)
+open import Data.Fin using (Fin; toℕ)
+open import Data.List using (List; []; _∷_; map; reverse)
+open import Data.Nat using (ℕ; suc; _+_; _∸_; _*_)
+open import Data.String using (String; toList)
+open import Data.Vec using (Vec; _∷_; take; tail)
+open import Function using (_$_; _∘_)
+
+data Either (A B : Set) : Set where
+  left  : A → Either A B
+  right : B → Either A B
+
+data InvalidChar : Set where
   char : Char → InvalidChar
 
-data ValidChar where
-  digit : Fin 10 → ValidChar
+data ValidChar : Set where
+  digit : ℕ → ValidChar
   space : ValidChar
 
-data Token where
+data Token : Set where
   number : ℕ → Token
-  space : Token
+  space  : Token
 
 scanChar : Char → Either InvalidChar ValidChar
 scanChar c with isDigit c | isSpace c
-... | false | false = left $ char c
-... | true  | false = right $ digit ((Fin ∘ toℕ) c)
+... | true  | false = right ∘ digit ∘ toDigit $ c
 ... | false | true  = right space
+... | _     | _     = left (char c)
 
 collectScans : List (Either InvalidChar ValidChar) → Either InvalidChar (List ValidChar)
 collectScans [] = right []
-collectScans s:ss with s | collectScans ss
-... | (left ic) _ = left ic
-... | _ (left ic) = left ic
-... | (right v) (right vs) = right (v :: vs)
+collectScans (s ∷ ss) with s | collectScans ss
+... | left ic | _        = left ic
+... | _       | left ic  = left ic
+... | right v | right vs = right (v ∷ vs)
 
 tokenize : List ValidChar → List Token
 tokenize = tokenize' []
   where
+    shift : ℕ → ℕ → Token
+    shift n d = number (n * 10 + d)
+
+    append : ℕ → List Token → List Token
+    append d [] = (shift 0 d) ∷ []
+    append d (space ∷ ts) = (shift 0 d) ∷ space ∷ ts
+    append d ((number n) ∷ ts) = (shift n d) ∷ ts
+
     tokenize' : List Token → List ValidChar → List Token
     tokenize' ts [] = reverse ts
-    tokenize' ts (space :: cs) = tokenize' (space :: ts) cs
-    tokenize' ts ((digit d) :: cs) = tokenize' (append d ts) cs
-
-    append : Fin 10 → List Token → List Token
-    append d [] = (shift 0 d) :: []
-    append d (space :: ts) = (shift 0 d) :: space :: ts
-    append d ((number n) :: ts) = (shift n d) :: ts
-
-    shift : ℕ → Fin 10 → Token
-    shift n d = n * 10 + (toℕ d)
+    tokenize' ts (space ∷ cs) = tokenize' (space ∷ ts) cs
+    tokenize' ts ((digit d) ∷ cs) = tokenize' (append d ts) cs
 
 parseTokens : List Token → List ℕ
-parseTokens (t :: ts) with t
-... | number n  = n :: parse ts
-... | space     = parse ts
+parseTokens [] = []
+parseTokens (t ∷ ts) with t
+... | number n  = n ∷ parseTokens ts
+... | space     = parseTokens ts
 
-parse :: String → Either InvalidChar (List ℕ)
-parse data = with collectScans ∘ map scanChar ∘ toList $ data
-... | (left ic) = left ic
-... | (right vcs) = parseTokens ∘ tokenize $ vcs
+parse : String → Either InvalidChar (List ℕ)
+parse = parse' ∘ collectScans ∘ map scanChar ∘ toList
+  where
+    parse' : Either InvalidChar (List ValidChar) → Either InvalidChar (List ℕ)
+    parse' (left ic) = left ic
+    parse' (right vcs) = right ∘ parseTokens ∘ tokenize $ vcs
 ```
 
 ---- Getting it going ----
